@@ -667,8 +667,38 @@ ESLO = (EGUF E<minus> EGUL) / (I<RVAL_max> E<minus> I<RVAL_min>)
 Note that the record support sets EOFF to EGUL before calling this routine,
 which is a very common case (when I<RVAL_min> is zero).
 
-=head3 Extended Device Support
+=head3 Device Support For Soft Records
 
-...
+Three soft device support modules C<Soft Channel>, C<Async Soft Channel>, and
+C<Raw Soft Channel> are provided for input records not related to actual
+hardware devices. The INP link type must be either a CONSTANT, DB_LINK, or
+CA_LINK.
+
+=head4 Soft Channel
+
+The constant value or the value from PV_LINK is stored into VAL with
+C<recGblInitConstantLink()> in C<init_record()>, and UDF is set to FALSE.
+
+If the link is constant, the value is placed directly in VAL. C<read_ai()>
+returns a value of 2, which means that no conversion was performed.
+
+If the link is PV_LINK or CA_LINK, C<read_ai()> calls C<dbGetLink()> after the
+lock set is released via C<dbLinkDoLocked()>. The smoothing algorithm is
+applied using the SMOO field. In case of no errors, C<read_ai()> sets UDF to
+FALSE and returns 2, which means that no conversion was performed.
+
+If soft support is chosen, the following fields become meaningless: LINR, EGUF,
+EGUL, ESLO, ROFF, AOFF, and ASLO. The C<read_ai()> routine always returns a
+value of 2 which means don't convert.
+
+=head4 Raw Soft Channel
+
+This module is like the previous except that it places its value in RVAL and
+C<read_ai()> returns the status of C<dbGetLink()>. So, if C<dbGetLink()>
+returns 0 to indicate success, the record processing routine will convert the
+raw value in the normal way.
+
+If raw soft support is chosen, the fields EGUF and EGUL become meaningless.
+ESLO and ROFF always have their default values of 1 and 0.
 
 =cut
