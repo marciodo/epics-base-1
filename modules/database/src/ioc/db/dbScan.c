@@ -92,7 +92,7 @@ typedef struct periodic_scan_list {
     scan_list           scan_list;
     double              period;
     const char          *name;
-    unsigned long       overruns;
+    size_t              overruns;
     volatile enum ctl   scanCtl;
     epicsEventId        loopEvent;
 } periodic_scan_list;
@@ -416,7 +416,7 @@ int scanpplStatus(double period, struct scanpplStats* result)
             continue;
 
         result->record_count += ellCount(&ppsl->scan_list.list);
-        result->overruns += ppsl->overruns;
+        result->overruns += epicsAtomicGetSizeT(&ppsl->overruns);
     }
 
     return 0;
@@ -444,7 +444,7 @@ int scanpplRstCounter(double period)
             (fabs(period - ppsl->period) > 0.05))
             continue;
 
-        ppsl->overruns = 0;
+        epicsAtomicSetSizeT(&ppsl->overruns, 0);
     }
 
     return 0;
@@ -476,7 +476,7 @@ int scanppl(double period)      /* print periodic scan list(s) */
             continue;
 
         sprintf(message, "Records with SCAN = '%s' (%lu over-runs):",
-            ppsl->name, ppsl->overruns);
+            ppsl->name, epicsAtomicGetSizeT(&ppsl->overruns));
         printList(&ppsl->scan_list, message);
     }
     return 0;
@@ -897,7 +897,7 @@ static void periodicTask(void *arg)
                     over_max = -delay;
             }
             delay = penalty;
-            ppsl->overruns++;
+            epicsAtomicIncrSizeT(&ppsl->overruns);
             next = now;
             epicsTimeAddSeconds(&next, delay);
             if (++overruns >= 10 &&
