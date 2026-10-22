@@ -380,6 +380,71 @@ double scanPeriod(int scan) {
     return ppsl ? ppsl->period : 0.0;
 }
 
+int scanpplStatus(double period, struct scanpplStats* result)
+{
+    if (result == NULL) {
+        printf("scanpplStatus: result pointer is NULL");
+        return -1;
+    }
+
+    dbMenu *pmenu = dbFindMenu(pdbbase, "menuScan");
+
+    if (!pmenu || !papPeriodic) {
+        printf("scanpplStatus: dbScan subsystem not initialized\n");
+        return -1;
+    }
+
+    result->period = period;
+    result->record_count = 0;
+    result->overruns = 0;
+
+    int i;
+    for (i = 0; i < nPeriodic; i++) {
+        periodic_scan_list *ppsl = papPeriodic[i];
+
+        if (!ppsl) {
+            continue;
+        }
+
+        if (period > 0.0 &&
+            (fabs(period - ppsl->period) > 0.05))
+            continue;
+
+        result->record_count += ellCount(&ppsl->scan_list.list);
+        result->overruns += ppsl->overruns;
+    }
+
+    return 0;
+}
+
+int scanpplRstCounter(double period)
+{
+    dbMenu *pmenu = dbFindMenu(pdbbase, "menuScan");
+
+    if (!pmenu || !papPeriodic) {
+        printf("scanpplRstCounter: dbScan subsystem not initialized\n");
+        return -1;
+    }
+
+    int i;
+    for (i = 0; i < nPeriodic; i++) {
+        periodic_scan_list *ppsl = papPeriodic[i];
+
+        if (!ppsl) {
+            continue;
+        }
+
+        if (period > 0.0 &&
+            (fabs(period - ppsl->period) > 0.05))
+            continue;
+
+        ppsl->overruns = 0;
+    }
+
+    return 0;
+}
+
+
 int scanppl(double period)      /* print periodic scan list(s) */
 {
     dbMenu *pmenu = dbFindMenu(pdbbase, "menuScan");

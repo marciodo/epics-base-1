@@ -453,12 +453,19 @@ static void scanOnceQueueShowCallFunc(const iocshArgBuf *args)
 
 /* scanppl */
 static const iocshArg scanpplArg0 = { "rate",iocshArgDouble};
-static const iocshArg * const scanpplArgs[1] = {&scanpplArg0};
-static const iocshFuncDef scanpplFuncDef = {"scanppl",1,scanpplArgs,
+static const iocshArg scanpplArg1 = { "reset",iocshArgInt};
+static const iocshArg * const scanpplArgs[2] = {&scanpplArg0, &scanpplArg1};
+static const iocshFuncDef scanpplFuncDef = {"scanppl",2,scanpplArgs,
                                             "Print info for records with periodic scan.\n"
-                                            "If rate == 0.0, all periods are shown.\n"};
+                                            "If rate == 0.0, all periods are shown.\n"
+                                            "Optional arg reset != 0 resets the overrun counter.\n"};
 static void scanpplCallFunc(const iocshArgBuf *args)
-{ iocshSetError(scanppl(args[0].dval));}
+{ 
+    if (args[1].ival) {
+        iocshSetError(scanpplRstCounter(args[0].dval));
+    }
+    iocshSetError(scanppl(args[0].dval));
+}
 
 /* scanpel */
 static const iocshArg scanpelArg0 = { "event name",iocshArgString};

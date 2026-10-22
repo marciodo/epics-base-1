@@ -15,6 +15,8 @@
 #ifndef INCdbScanH
 #define INCdbScanH
 
+#define HAS_DBSCAN_STATS 1
+
 #include <limits.h>
 
 #include "menuScan.h"
@@ -108,7 +110,36 @@ DBCORE_API int scanOnceSetQueueSize(int size);
 DBCORE_API int scanOnceQueueStatus(const int reset, scanOnceQueueStats *result);
 DBCORE_API void scanOnceQueueShow(const int reset);
 
-/*print periodic lists*/
+/* Store periodic scan data */
+struct scanpplStats {
+    double period;
+    int record_count;
+    size_t overruns;
+};
+/** @brief Retrieve periodic scan data
+ *
+ * Must be called after iocInit()
+ *
+ * @param period SCAN period.  If zero, returns the sum of all periods.
+ * @param result Pointer to struct scanpplStats that will return the data.
+ * @return Zero on success
+ */
+DBCORE_API int scanpplStatus(double period, struct scanpplStats *result);
+/** @brief Reset overrun counters for periodic scan data
+ *
+ * Must be called after iocInit()
+ *
+ * @param period SCAN period.  If zero, reset all the counters.
+ * @return Zero on success
+ */
+DBCORE_API int scanpplRstCounter(double period);
+/** @brief Print periodic lists
+ *
+ * Must be called after iocInit()
+ *
+ * @param period SCAN period.  If zero, prints for all periods.
+ * @return Zero on success
+ */
 DBCORE_API int scanppl(double rate);
 
 /*print event lists*/
