@@ -108,11 +108,15 @@ static char *priorityName[NUM_CALLBACK_PRIORITIES] = {
 
 
 /* EVENT */
-
+/* Note to potential future victims trying to modify this struct: if adding new
+*  items, make it before eventname. eventname size is modified dinamically and
+*  you'll get a buffer overflow if you place anything after it.
+*/
 typedef struct event_list {
-    epicsCallback            callback[NUM_CALLBACK_PRIORITIES];
+    epicsCallback       callback[NUM_CALLBACK_PRIORITIES];
     scan_list           scan_list[NUM_CALLBACK_PRIORITIES];
     struct event_list   *next;
+    size_t              counter;
     char                eventname[1]; /* actually arbitrary size */
 } event_list;
 /* All event_list are singly linked from pevent_list[0] via next.
@@ -380,6 +384,7 @@ double scanPeriod(int scan) {
     return ppsl ? ppsl->period : 0.0;
 }
 
+/* Retrieve periodic scan data */
 int scanpplStatus(double period, struct scanpplStats* result)
 {
     if (result == NULL) {
@@ -417,6 +422,7 @@ int scanpplStatus(double period, struct scanpplStats* result)
     return 0;
 }
 
+/* Reset overrun counters */
 int scanpplRstCounter(double period)
 {
     dbMenu *pmenu = dbFindMenu(pdbbase, "menuScan");
@@ -443,7 +449,6 @@ int scanpplRstCounter(double period)
 
     return 0;
 }
-
 
 int scanppl(double period)      /* print periodic scan list(s) */
 {
@@ -485,7 +490,9 @@ int scanpel(const char* eventname)   /* print event list */
 
     for (pel = pevent_list[0]; pel; pel = pel->next) {
         if (!eventname || epicsStrGlobMatch(pel->eventname, eventname)) {
-            printf("Event \"%s\"\n", pel->eventname);
+            size_t evt_count = epicsAtomicGetSizeT(&pel->counter);
+            // Print "0 times" / "1 time" / "2 times" ...
+            printf("Event \"%s\" called %zu time%c\n", pel->eventname, evt_count, evt_count==1? ' ' :'s');
             for (prio = 0; prio < NUM_CALLBACK_PRIORITIES; prio++) {
                 if (ellCount(&pel->scan_list[prio].list) == 0) continue;
                 sprintf(message, " Priority %s", priorityName[prio]);
@@ -606,8 +613,9 @@ void postEvent(event_list *pel)
 
     if (scanCtl != ctlRun) return;
     if (!pel) return;
+    epicsAtomicIncrSizeT(&pel->counter);
     for (prio = 0; prio < NUM_CALLBACK_PRIORITIES; prio++) {
-        if (ellCount(&pel->scan_list[prio].list) >0)
+        if (ellCount(&pel->scan_list[prio].list) > 0)
             callbackRequest(&pel->callback[prio]);
     }
 }
